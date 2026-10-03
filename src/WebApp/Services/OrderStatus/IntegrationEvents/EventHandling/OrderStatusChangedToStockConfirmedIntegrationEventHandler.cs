@@ -9,7 +9,7 @@ public class OrderStatusChangedToStockConfirmedIntegrationEventHandler(
 {
     public async Task Handle(OrderStatusChangedToStockConfirmedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        WebAppTrace.LogHandlingIntegrationEvent(logger, @event.Id, @event);
         await orderStatusNotificationService.NotifyOrderStatusChangedAsync(@event.BuyerIdentityGuid);
     }
 }

@@ -32,7 +32,7 @@ public class ChatState
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("ChatModel: {model}", chatClient.GetService<ChatClientMetadata>()?.DefaultModelId);
+            WebAppTrace.LogChatModel(_logger, chatClient.GetService<ChatClientMetadata>()?.DefaultModelId);
         }
 
         _chatClient = chatClient;
@@ -85,7 +85,7 @@ public class ChatState
         {
             if (_logger.IsEnabled(LogLevel.Error))
             {
-                _logger.LogError(e, "Error getting chat completions.");
+                WebAppTrace.LogChatCompletionsError(_logger, e);
             }
             Messages.Add(new ChatMessage(ChatRole.Assistant, $"My apologies, but I encountered an unexpected error."));
         }

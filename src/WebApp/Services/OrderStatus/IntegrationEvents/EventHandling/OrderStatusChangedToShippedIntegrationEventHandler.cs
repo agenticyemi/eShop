@@ -9,7 +9,7 @@ public class OrderStatusChangedToShippedIntegrationEventHandler(
 {
     public async Task Handle(OrderStatusChangedToShippedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        WebAppTrace.LogHandlingIntegrationEvent(logger, @event.Id, @event);
         await orderStatusNotificationService.NotifyOrderStatusChangedAsync(@event.BuyerIdentityGuid);
     }
 }
