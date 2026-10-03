@@ -38,12 +38,12 @@ public class RedisBasketRepository(ILogger<RedisBasketRepository> logger, IConne
 
         if (!created)
         {
-            logger.LogInformation("Problem occurred persisting the item.");
+            BasketApiLog.LogBasketItemPersistenceFailed(logger);
             return null;
         }
 
 
-        logger.LogInformation("Basket item persisted successfully.");
+        BasketApiLog.LogBasketItemPersisted(logger);
         return await GetBasketAsync(basket.BuyerId);
     }
 }

@@ -9,7 +9,7 @@ public class OrderStartedIntegrationEventHandler(
 {
     public async Task Handle(OrderStartedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        BasketApiLog.LogHandlingIntegrationEvent(logger, @event.Id, @event);
 
         await repository.DeleteBasketAsync(@event.UserId);
     }
