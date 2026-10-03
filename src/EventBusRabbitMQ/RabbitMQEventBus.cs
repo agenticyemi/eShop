@@ -32,17 +32,11 @@ public sealed class RabbitMQEventBus(
     {
         var routingKey = @event.GetType().Name;
 
-        if (logger.IsEnabled(LogLevel.Trace))
-        {
-            logger.LogTrace("Creating RabbitMQ channel to publish event: {EventId} ({EventName})", @event.Id, routingKey);
-        }
+        EventBusRabbitMqTrace.LogCreatingRabbitMqChannelToPublishEvent(logger, @event.Id, routingKey);
 
         using var channel = (await _rabbitMQConnection?.CreateChannelAsync()) ?? throw new InvalidOperationException("RabbitMQ connection is not open");
 
-        if (logger.IsEnabled(LogLevel.Trace))
-        {
-            logger.LogTrace("Declaring RabbitMQ exchange to publish event: {EventId}", @event.Id);
-        }
+        EventBusRabbitMqTrace.LogDeclaringRabbitMqExchangeToPublishEvent(logger, @event.Id);
 
         await channel.ExchangeDeclareAsync(
             exchange: ExchangeName, 
@@ -87,10 +81,7 @@ public sealed class RabbitMQEventBus(
 
             SetActivityContext(activity, routingKey, "publish");
 
-            if (logger.IsEnabled(LogLevel.Trace))
-            {
-                logger.LogTrace("Publishing event to RabbitMQ: {EventId}", @event.Id);
-            }
+            EventBusRabbitMqTrace.LogPublishingEventToRabbitMq(logger, @event.Id);
 
             try
             {
@@ -169,7 +160,7 @@ public sealed class RabbitMQEventBus(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Error Processing message \"{Message}\"", message);
+            EventBusRabbitMqTrace.LogErrorProcessingMessage(logger, ex, message);
 
             activity.SetExceptionTags(ex);
         }
@@ -182,16 +173,13 @@ public sealed class RabbitMQEventBus(
 
     private async Task ProcessEvent(string eventName, string message)
     {
-        if (logger.IsEnabled(LogLevel.Trace))
-        {
-            logger.LogTrace("Processing RabbitMQ event: {EventName}", eventName);
-        }
+        EventBusRabbitMqTrace.LogProcessingRabbitMqEvent(logger, eventName);
 
         await using var scope = serviceProvider.CreateAsyncScope();
 
         if (!_subscriptionInfo.EventTypes.TryGetValue(eventName, out var eventType))
         {
-            logger.LogWarning("Unable to resolve event type for event name {EventName}", eventName);
+            EventBusRabbitMqTrace.LogUnableToResolveEventTypeForEventName(logger, eventName);
             return;
         }
 
@@ -230,7 +218,7 @@ public sealed class RabbitMQEventBus(
         {
             try
             {
-                logger.LogInformation("Starting RabbitMQ connection on a background thread");
+                EventBusRabbitMqTrace.LogStartingRabbitMqConnectionOnBackgroundThread(logger);
 
                 _rabbitMQConnection = serviceProvider.GetRequiredService<IConnection>();
                 if (!_rabbitMQConnection.IsOpen)
@@ -238,16 +226,13 @@ public sealed class RabbitMQEventBus(
                     return;
                 }
 
-                if (logger.IsEnabled(LogLevel.Trace))
-                {
-                    logger.LogTrace("Creating RabbitMQ consumer channel");
-                }
+                EventBusRabbitMqTrace.LogCreatingRabbitMqConsumerChannel(logger);
 
                 _consumerChannel = await _rabbitMQConnection.CreateChannelAsync();
 
                 _consumerChannel.CallbackExceptionAsync += (sender, ea) =>
                 {
-                    logger.LogWarning(ea.Exception, "Error with RabbitMQ consumer channel");
+                    EventBusRabbitMqTrace.LogErrorWithRabbitMqConsumerChannel(logger, ea.Exception);
                     return Task.CompletedTask;
                 };
 
@@ -262,10 +247,7 @@ public sealed class RabbitMQEventBus(
                     autoDelete: false,
                     arguments: null);
 
-                if (logger.IsEnabled(LogLevel.Trace))
-                {
-                    logger.LogTrace("Starting RabbitMQ basic consume");
-                }
+                EventBusRabbitMqTrace.LogStartingRabbitMqBasicConsume(logger);
 
                 var consumer = new AsyncEventingBasicConsumer(_consumerChannel);
 
@@ -286,7 +268,7 @@ public sealed class RabbitMQEventBus(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error starting RabbitMQ connection");
+                EventBusRabbitMqTrace.LogErrorStartingRabbitMqConnection(logger, ex);
             }
         },
         TaskCreationOptions.LongRunning);
