@@ -18,10 +18,7 @@ public class BasketService(
             return new();
         }
 
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            logger.LogDebug("Begin GetBasketById call from method {Method} for basket id {Id}", context.Method, userId);
-        }
+        BasketApiLog.LogBeginGetBasket(logger, context.Method, userId);
 
         var data = await repository.GetBasketAsync(userId);
 
@@ -41,10 +38,7 @@ public class BasketService(
             ThrowNotAuthenticated();
         }
 
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            logger.LogDebug("Begin UpdateBasket call from method {Method} for basket id {Id}", context.Method, userId);
-        }
+        BasketApiLog.LogBeginUpdateBasket(logger, context.Method, userId);
 
         var customerBasket = MapToCustomerBasket(userId, request);
         var response = await repository.UpdateBasketAsync(customerBasket);
