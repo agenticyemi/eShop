@@ -76,8 +76,8 @@ public abstract class IdentifiedCommandHandler<T, R> : IRequestHandler<Identifie
                         break;
                 }
 
-                _logger.LogInformation(
-                    "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                OrderingApiLog.LogSendingCommand(
+                    _logger,
                     commandName,
                     idProperty,
                     commandId,
@@ -86,8 +86,8 @@ public abstract class IdentifiedCommandHandler<T, R> : IRequestHandler<Identifie
                 // Send the embedded business command to mediator so it runs its related CommandHandler 
                 var result = await _mediator.Send(command, cancellationToken);
 
-                _logger.LogInformation(
-                    "Command result: {@Result} - {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                OrderingApiLog.LogCommandResult(
+                    _logger,
                     result,
                     commandName,
                     idProperty,

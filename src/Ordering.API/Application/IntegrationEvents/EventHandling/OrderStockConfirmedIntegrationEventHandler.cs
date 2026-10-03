@@ -7,12 +7,12 @@ public class OrderStockConfirmedIntegrationEventHandler(
 {
     public async Task Handle(OrderStockConfirmedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        OrderingApiLog.LogHandlingIntegrationEvent(logger, @event.Id, @event);
 
         var command = new SetStockConfirmedOrderStatusCommand(@event.OrderId);
 
-        logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiLog.LogSendingCommand(
+            logger,
             command.GetGenericTypeName(),
             nameof(command.OrderNumber),
             command.OrderNumber,
