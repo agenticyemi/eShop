@@ -39,14 +39,14 @@ public class UsersSeed(ILogger<UsersSeed> logger, UserManager<ApplicationUser> u
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("alice created");
+                IdentityApiTrace.LogAliceCreated(logger);
             }
         }
         else
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("alice already exists");
+                IdentityApiTrace.LogAliceAlreadyExists(logger);
             }
         }
 
@@ -84,14 +84,14 @@ public class UsersSeed(ILogger<UsersSeed> logger, UserManager<ApplicationUser> u
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("bob created");
+                IdentityApiTrace.LogBobCreated(logger);
             }
         }
         else
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("bob already exists");
+                IdentityApiTrace.LogBobAlreadyExists(logger);
             }
         }
     }

@@ -33,6 +33,7 @@ global using eShop.Identity.API;
 global using eShop.Identity.API.Configuration;
 global using eShop.Identity.API.Data;
 global using eShop.Identity.API.Models;
+global using eShop.Identity.API.Extensions;
 global using eShop.Identity.API.Services;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;

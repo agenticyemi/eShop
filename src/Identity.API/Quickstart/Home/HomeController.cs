@@ -29,7 +29,7 @@ namespace IdentityServerHost.Quickstart.UI
                 return View();
             }
 
-            _logger.LogInformation("Homepage is disabled in production. Returning 404.");
+            IdentityApiTrace.LogHomepageDisabled(_logger);
             return NotFound();
         }
 
