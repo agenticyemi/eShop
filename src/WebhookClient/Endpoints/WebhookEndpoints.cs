@@ -32,11 +32,12 @@ public static class WebhookEndpoints
         {
             var token = request.Headers[webhookCheckHeader];
 
-            logger.LogInformation("Received hook with token {Token}. My token is {MyToken}. Token validation is set to {ValidateToken}", token, tokenToValidate, validateToken);
+            // LoggerExtensions formats a header StringValues by joining its values with ", ".
+            WebhookEndpointsLog.LogReceivedHook(logger, string.Join(", ", (IEnumerable<string>)token), tokenToValidate, validateToken);
 
             if (!validateToken || tokenToValidate == token)
             {
-                logger.LogInformation("Received hook is going to be processed");
+                WebhookEndpointsLog.LogReceivedHookProcessing(logger);
                 var newHook = new WebHookReceived()
                 {
                     Data = hook.Payload,
@@ -44,11 +45,11 @@ public static class WebhookEndpoints
                     Token = token
                 };
                 await hooksRepository.AddNew(newHook);
-                logger.LogInformation("Received hook was processed.");
+                WebhookEndpointsLog.LogReceivedHookProcessed(logger);
                 return Results.Ok(newHook);
             }
 
-            logger.LogInformation("Received hook is NOT processed - Bad Request returned.");
+            WebhookEndpointsLog.LogReceivedHookNotProcessed(logger);
             return Results.BadRequest();
         });
 
