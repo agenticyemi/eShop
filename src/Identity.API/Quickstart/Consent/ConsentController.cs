@@ -156,7 +156,7 @@ public class ConsentController : Controller
         }
         else
         {
-            _logger.LogError("No consent request matching request: {0}", returnUrl);
+            IdentityApiTrace.LogNoConsentRequestMatchingRequest(_logger, returnUrl);
         }
 
         return null;
