@@ -9,7 +9,7 @@ public class OrderStatusChangedToCancelledIntegrationEventHandler(
 {
     public async Task Handle(OrderStatusChangedToCancelledIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        WebAppLog.LogHandlingIntegrationEvent(logger, @event.Id, @event);
         await orderStatusNotificationService.NotifyOrderStatusChangedAsync(@event.BuyerIdentityGuid);
     }
 }
