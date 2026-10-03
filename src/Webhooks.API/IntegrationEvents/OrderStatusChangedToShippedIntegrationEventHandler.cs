@@ -1,4 +1,6 @@
-﻿namespace Webhooks.API.IntegrationEvents;
+﻿using Webhooks.API.Extensions;
+
+namespace Webhooks.API.IntegrationEvents;
 
 public class OrderStatusChangedToShippedIntegrationEventHandler(
     IWebhooksRetriever retriever,
@@ -9,7 +11,7 @@ public class OrderStatusChangedToShippedIntegrationEventHandler(
     {
         var subscriptions = await retriever.GetSubscriptionsOfType(WebhookType.OrderShipped);
 
-        logger.LogInformation("Received OrderStatusChangedToShippedIntegrationEvent and got {SubscriptionCount} subscriptions to process", subscriptions.Count());
+        WebhooksApiTrace.LogOrderShippedSubscriptions(logger, subscriptions.Count());
 
         var whook = new WebhookData(WebhookType.OrderShipped, @event);
 
