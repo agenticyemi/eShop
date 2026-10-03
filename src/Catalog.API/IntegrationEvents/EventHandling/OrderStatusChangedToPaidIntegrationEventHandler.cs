@@ -7,7 +7,7 @@ public class OrderStatusChangedToPaidIntegrationEventHandler(
 {
     public async Task Handle(OrderStatusChangedToPaidIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        CatalogApiTrace.LogHandlingIntegrationEvent(logger, @event.Id, @event);
 
         //we're not blocking stock/inventory
         foreach (var orderStockItem in @event.OrderStockItems)

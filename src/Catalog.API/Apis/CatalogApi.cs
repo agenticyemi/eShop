@@ -271,7 +271,7 @@ public static class CatalogApi
                 .Take(pageSize)
                 .ToListAsync();
 
-            services.Logger.LogDebug("Results from {text}: {results}", text, string.Join(", ", itemsWithDistance.Select(i => $"{i.Item.Name} => {i.Distance}")));
+            CatalogApiTrace.LogSemanticSearchResults(services.Logger, text, string.Join(", ", itemsWithDistance.Select(i => $"{i.Item.Name} => {i.Distance}")));
 
             itemsOnPage = itemsWithDistance.Select(i => i.Item).ToList();
         }
