@@ -1,4 +1,6 @@
-﻿namespace Webhooks.API.Services;
+﻿using Webhooks.API.Extensions;
+
+namespace Webhooks.API.Services;
 
 public class WebhooksSender(IHttpClientFactory httpClientFactory, ILogger<WebhooksSender> logger) : IWebhooksSender
 {
@@ -26,7 +28,7 @@ public class WebhooksSender(IHttpClientFactory httpClientFactory, ILogger<Webhoo
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Sending hook to {DestUrl} of type {Type}", subs.DestUrl, subs.Type);
+            WebhooksApiTrace.LogSendingHook(logger, subs.DestUrl, subs.Type);
         }
 
         return client.SendAsync(request);
