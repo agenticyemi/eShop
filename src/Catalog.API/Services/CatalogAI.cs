@@ -40,10 +40,7 @@ public sealed class CatalogAI : ICatalogAI
             GeneratedEmbeddings<Embedding<float>> embeddings = await _embeddingGenerator!.GenerateAsync(items.Select(CatalogItemToString));
             var results = embeddings.Select(m => new Vector(m.Vector[0..EmbeddingDimensions])).ToList();
 
-            if (_logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace("Generated {EmbeddingsCount} embeddings in {ElapsedMilliseconds}s", results.Count, Stopwatch.GetElapsedTime(timestamp).TotalSeconds);
-            }
+            CatalogApiTrace.LogGeneratedEmbeddings(_logger, results.Count, Stopwatch.GetElapsedTime(timestamp).TotalSeconds);
 
             return results;
         }
@@ -61,10 +58,7 @@ public sealed class CatalogAI : ICatalogAI
             var embedding = await _embeddingGenerator!.GenerateVectorAsync(text);
             embedding = embedding[0..EmbeddingDimensions];
 
-            if (_logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace("Generated embedding in {ElapsedMilliseconds}s: '{Text}'", Stopwatch.GetElapsedTime(timestamp).TotalSeconds, text);
-            }
+            CatalogApiTrace.LogGeneratedEmbedding(_logger, Stopwatch.GetElapsedTime(timestamp).TotalSeconds, text);
 
             return new Vector(embedding);
         }
