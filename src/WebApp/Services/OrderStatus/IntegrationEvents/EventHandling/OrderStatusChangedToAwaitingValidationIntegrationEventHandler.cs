@@ -9,7 +9,7 @@ public class OrderStatusChangedToAwaitingValidationIntegrationEventHandler(
 {
     public async Task Handle(OrderStatusChangedToAwaitingValidationIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        WebAppTrace.LogHandlingIntegrationEvent(logger, @event.Id, @event);
         await orderStatusNotificationService.NotifyOrderStatusChangedAsync(@event.BuyerIdentityGuid);
     }
 }
