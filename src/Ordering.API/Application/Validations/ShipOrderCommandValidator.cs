@@ -8,7 +8,7 @@ public class ShipOrderCommandValidator : AbstractValidator<ShipOrderCommand>
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
-            logger.LogTrace("INSTANCE CREATED - {ClassName}", GetType().Name);
+            OrderingApiLog.LogInstanceCreated(logger, GetType().Name);
         }
     }
 }

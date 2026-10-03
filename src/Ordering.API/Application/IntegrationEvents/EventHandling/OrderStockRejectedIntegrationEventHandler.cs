@@ -5,7 +5,7 @@ public class OrderStockRejectedIntegrationEventHandler(
 {
     public async Task Handle(OrderStockRejectedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        OrderingApiLog.LogHandlingIntegrationEvent(logger, @event.Id, @event);
 
         var orderStockRejectedItems = @event.OrderStockItems
             .FindAll(c => !c.HasStock)
@@ -14,8 +14,8 @@ public class OrderStockRejectedIntegrationEventHandler(
 
         var command = new SetStockRejectedOrderStatusCommand(@event.OrderId, orderStockRejectedItems);
 
-        logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiLog.LogSendingCommand(
+            logger,
             command.GetGenericTypeName(),
             nameof(command.OrderNumber),
             command.OrderNumber,

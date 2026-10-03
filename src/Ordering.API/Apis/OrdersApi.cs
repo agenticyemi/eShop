@@ -31,8 +31,8 @@ public static class OrdersApi
 
         var requestCancelOrder = new IdentifiedCommand<CancelOrderCommand, bool>(command, requestId);
 
-        services.Logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiLog.LogSendingCommand(
+            services.Logger,
             requestCancelOrder.GetGenericTypeName(),
             nameof(requestCancelOrder.Command.OrderNumber),
             requestCancelOrder.Command.OrderNumber,
@@ -60,8 +60,8 @@ public static class OrdersApi
 
         var requestShipOrder = new IdentifiedCommand<ShipOrderCommand, bool>(command, requestId);
 
-        services.Logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiLog.LogSendingCommand(
+            services.Logger,
             requestShipOrder.GetGenericTypeName(),
             nameof(requestShipOrder.Command.OrderNumber),
             requestShipOrder.Command.OrderNumber,
@@ -105,8 +105,8 @@ public static class OrdersApi
 
     public static async Task<OrderDraftDTO> CreateOrderDraftAsync(CreateOrderDraftCommand command, [AsParameters] OrderServices services)
     {
-        services.Logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiLog.LogSendingCommand(
+            services.Logger,
             command.GetGenericTypeName(),
             nameof(command.BuyerId),
             command.BuyerId,
@@ -123,15 +123,15 @@ public static class OrdersApi
         
         //mask the credit card number
         
-        services.Logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId}",
+        OrderingApiLog.LogSendingCommand(
+            services.Logger,
             request.GetGenericTypeName(),
             nameof(request.UserId),
             request.UserId); //don't log the request as it has CC number
 
         if (requestId == Guid.Empty)
         {
-            services.Logger.LogWarning("Invalid IntegrationEvent - RequestId is missing - {@IntegrationEvent}", request);
+            OrderingApiLog.LogInvalidIntegrationEvent(services.Logger, request);
             return TypedResults.BadRequest("RequestId is missing.");
         }
 
@@ -145,8 +145,8 @@ public static class OrdersApi
 
             var requestCreateOrder = new IdentifiedCommand<CreateOrderCommand, bool>(createOrderCommand, requestId);
 
-            services.Logger.LogInformation(
-                "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+            OrderingApiLog.LogSendingCommand(
+                services.Logger,
                 requestCreateOrder.GetGenericTypeName(),
                 nameof(requestCreateOrder.Id),
                 requestCreateOrder.Id,
@@ -156,11 +156,11 @@ public static class OrdersApi
 
             if (result)
             {
-                services.Logger.LogInformation("CreateOrderCommand succeeded - RequestId: {RequestId}", requestId);
+                OrderingApiLog.LogCreateOrderCommandSucceeded(services.Logger, requestId);
             }
             else
             {
-                services.Logger.LogWarning("CreateOrderCommand failed - RequestId: {RequestId}", requestId);
+                OrderingApiLog.LogCreateOrderCommandFailed(services.Logger, requestId);
             }
 
             return TypedResults.Ok();

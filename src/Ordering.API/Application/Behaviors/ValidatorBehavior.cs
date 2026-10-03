@@ -15,7 +15,7 @@ public class ValidatorBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest
     {
         var typeName = request.GetGenericTypeName();
 
-        _logger.LogInformation("Validating command {CommandType}", typeName);
+        OrderingApiLog.LogValidatingCommand(_logger, typeName);
 
         var validationTasks = _validators.Select(v => v.ValidateAsync(request, cancellationToken));
         var validationResults = await Task.WhenAll(validationTasks);
@@ -27,12 +27,42 @@ public class ValidatorBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest
 
         if (failures.Any())
         {
-            _logger.LogWarning("Validation errors - {CommandType} - Command: {@Command} - Errors: {@ValidationErrors}", typeName, request, failures);
+            OrderingApiLog.LogValidationErrors(_logger, typeName, request, FormatLogEnumerable(failures));
 
             throw new OrderingDomainException(
                 $"Command Validation Errors for type {typeof(TRequest).Name}", new ValidationException("Validation exception", failures));
         }
 
         return await next();
+    }
+
+    // LogValuesFormatter joins enumerables in the message. LoggerMessage calls ToString on the argument.
+    private static string FormatLogEnumerable(System.Collections.IEnumerable values)
+    {
+        var builder = new System.Text.StringBuilder();
+        var first = true;
+        foreach (var value in values)
+        {
+            if (!first)
+            {
+                builder.Append(", ");
+            }
+
+            first = false;
+            if (value is null)
+            {
+                builder.Append("(null)");
+            }
+            else if (value is IFormattable formattable)
+            {
+                builder.Append(formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                builder.Append(value.ToString());
+            }
+        }
+
+        return builder.ToString();
     }
 }
