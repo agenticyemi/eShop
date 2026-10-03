@@ -17,7 +17,7 @@ public class CreateOrderCommandValidator : AbstractValidator<CreateOrderCommand>
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
-            logger.LogTrace("INSTANCE CREATED - {ClassName}", GetType().Name);
+            OrderingApiTrace.LogValidatorInstanceCreated(logger, GetType().Name);
         }
     }
 

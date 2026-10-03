@@ -15,7 +15,7 @@ public class ValidatorBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest
     {
         var typeName = request.GetGenericTypeName();
 
-        _logger.LogInformation("Validating command {CommandType}", typeName);
+        OrderingApiTrace.LogValidatingCommand(_logger, typeName);
 
         var validationTasks = _validators.Select(v => v.ValidateAsync(request, cancellationToken));
         var validationResults = await Task.WhenAll(validationTasks);
@@ -27,7 +27,7 @@ public class ValidatorBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest
 
         if (failures.Any())
         {
-            _logger.LogWarning("Validation errors - {CommandType} - Command: {@Command} - Errors: {@ValidationErrors}", typeName, request, failures);
+            OrderingApiTrace.LogValidationErrors(_logger, typeName, request, failures);
 
             throw new OrderingDomainException(
                 $"Command Validation Errors for type {typeof(TRequest).Name}", new ValidationException("Validation exception", failures));

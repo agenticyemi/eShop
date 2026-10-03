@@ -8,7 +8,7 @@ public class IdentifiedCommandValidator : AbstractValidator<IdentifiedCommand<Cr
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
-            logger.LogTrace("INSTANCE CREATED - {ClassName}", GetType().Name);
+            OrderingApiTrace.LogValidatorInstanceCreated(logger, GetType().Name);
         }
     }
 }

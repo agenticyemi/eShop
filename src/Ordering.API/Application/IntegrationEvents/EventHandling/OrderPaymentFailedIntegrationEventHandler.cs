@@ -7,12 +7,12 @@ public class OrderPaymentFailedIntegrationEventHandler(
 {
     public async Task Handle(OrderPaymentFailedIntegrationEvent @event)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id, @event);
+        OrderingApiTrace.LogHandlingIntegrationEvent(logger, @event.Id, @event);
 
         var command = new CancelOrderCommand(@event.OrderId);
 
-        logger.LogInformation(
-            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+        OrderingApiTrace.LogSendingCommand(
+            logger,
             command.GetGenericTypeName(),
             nameof(command.OrderNumber),
             command.OrderNumber,
