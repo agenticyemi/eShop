@@ -19,34 +19,25 @@ namespace eShop.OrderProcessor.Services
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("GracePeriodManagerService is starting.");
-                stoppingToken.Register(() => logger.LogDebug("GracePeriodManagerService background task is stopping."));
+                OrderProcessorTrace.LogGracePeriodManagerStarting(logger);
+                stoppingToken.Register(() => OrderProcessorTrace.LogGracePeriodManagerStopping(logger));
             }
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (logger.IsEnabled(LogLevel.Debug))
-                {
-                    logger.LogDebug("GracePeriodManagerService background task is doing background work.");
-                }
+                OrderProcessorTrace.LogGracePeriodManagerDoingWork(logger);
 
                 await CheckConfirmedGracePeriodOrders();
 
                 await Task.Delay(delayTime, stoppingToken);
             }
 
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("GracePeriodManagerService background task is stopping.");
-            }
+            OrderProcessorTrace.LogGracePeriodManagerStopping(logger);
         }
 
         private async Task CheckConfirmedGracePeriodOrders()
         {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Checking confirmed grace period orders");
-            }
+            OrderProcessorTrace.LogCheckingConfirmedGracePeriodOrders(logger);
 
             var orderIds = await GetConfirmedGracePeriodOrders();
 
@@ -54,7 +45,7 @@ namespace eShop.OrderProcessor.Services
             {
                 var confirmGracePeriodEvent = new GracePeriodConfirmedIntegrationEvent(orderId);
 
-                logger.LogInformation("Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", confirmGracePeriodEvent.Id, confirmGracePeriodEvent);
+                OrderProcessorTrace.LogPublishingIntegrationEvent(logger, confirmGracePeriodEvent.Id, confirmGracePeriodEvent);
 
                 await eventBus.PublishAsync(confirmGracePeriodEvent);
             }
@@ -86,7 +77,7 @@ namespace eShop.OrderProcessor.Services
             }
             catch (NpgsqlException exception)
             {
-                logger.LogError(exception, "Fatal error establishing database connection");
+                OrderProcessorTrace.LogDatabaseConnectionError(logger, exception);
             }
 
             return [];
