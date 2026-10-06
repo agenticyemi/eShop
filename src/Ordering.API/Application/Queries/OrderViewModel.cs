@@ -29,6 +29,37 @@ public record OrderSummary
     public DateTime Date { get; init; }
     public string Status { get; init; }
     public double Total { get; init; }
+    // Status of the most recently requested return on the order, if any
+    public string ReturnStatus { get; init; }
+}
+
+public record ReturnableItem
+{
+    public int ProductId { get; init; }
+    public string ProductName { get; init; }
+    public string PictureUrl { get; init; }
+    public int Units { get; init; }
+    public int ReturnableUnits { get; init; }
+}
+
+public record ReturnSummary
+{
+    public int ReturnNumber { get; init; }
+    public int ProductId { get; init; }
+    public string ProductName { get; init; }
+    public int Units { get; init; }
+    public string Reason { get; init; }
+    public string Status { get; init; }
+    public DateTime RequestDate { get; init; }
+}
+
+public record OrderReturns
+{
+    public int OrderNumber { get; init; }
+    public string OrderStatus { get; init; }
+    public bool CanRequestReturn { get; init; }
+    public List<ReturnableItem> Items { get; init; }
+    public List<ReturnSummary> Returns { get; init; }
 }
 
 public record CardType

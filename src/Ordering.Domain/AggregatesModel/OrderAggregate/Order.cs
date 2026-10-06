@@ -32,6 +32,12 @@ public class Order
    
     public IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
+    // Returns are requested per line item and, like OrderItems, are only
+    // created through the aggregate root (see RequestReturn()).
+    private readonly List<OrderReturn> _orderReturns;
+
+    public IReadOnlyCollection<OrderReturn> OrderReturns => _orderReturns.AsReadOnly();
+
     public int? PaymentId { get; private set; }
 
     public static Order NewDraft()
@@ -46,6 +52,7 @@ public class Order
     protected Order()
     {
         _orderItems = new List<OrderItem>();
+        _orderReturns = new List<OrderReturn>();
         _isDraft = false;
     }
 
@@ -165,6 +172,81 @@ public class Order
             var itemsStockRejectedDescription = string.Join(", ", itemsStockRejectedProductNames);
             Description = $"The product items don't have stock: ({itemsStockRejectedDescription}).";
         }
+    }
+
+    // Returns can only be requested once the order can no longer be cancelled,
+    // i.e. once it has been paid for or shipped.
+    public bool CanRequestReturn()
+        => OrderStatus == OrderStatus.Paid || OrderStatus == OrderStatus.Shipped;
+
+    // Units of an order item that have not already been claimed by a pending or completed return.
+    public int GetReturnableUnits(int productId)
+    {
+        var orderItem = _orderItems.SingleOrDefault(o => o.ProductId == productId);
+        if (orderItem is null)
+        {
+            return 0;
+        }
+
+        var reservedUnits = _orderReturns
+            .Where(r => r.ProductId == productId && r.ReservesUnits)
+            .Sum(r => r.Units);
+
+        return orderItem.Units - reservedUnits;
+    }
+
+    public OrderReturn RequestReturn(int productId, int units, string reason)
+    {
+        if (!CanRequestReturn())
+        {
+            throw new OrderingDomainException($"Is not possible to request a return for an order in status {OrderStatus}.");
+        }
+
+        var orderItem = _orderItems.SingleOrDefault(o => o.ProductId == productId);
+        if (orderItem is null)
+        {
+            throw new OrderingDomainException($"The order does not contain product {productId}.");
+        }
+
+        var returnableUnits = GetReturnableUnits(productId);
+        if (units > returnableUnits)
+        {
+            throw new OrderingDomainException($"Only {returnableUnits} unit(s) of {orderItem.ProductName} can still be returned.");
+        }
+
+        var orderReturn = new OrderReturn(productId, orderItem.ProductName, units, reason);
+        _orderReturns.Add(orderReturn);
+
+        AddDomainEvent(new OrderReturnStatusChangedDomainEvent(this, orderReturn));
+
+        return orderReturn;
+    }
+
+    public void ApproveReturn(int returnId)
+    {
+        var orderReturn = GetOrderReturn(returnId);
+        orderReturn.SetApprovedStatus();
+        AddDomainEvent(new OrderReturnStatusChangedDomainEvent(this, orderReturn));
+    }
+
+    public void RejectReturn(int returnId)
+    {
+        var orderReturn = GetOrderReturn(returnId);
+        orderReturn.SetRejectedStatus();
+        AddDomainEvent(new OrderReturnStatusChangedDomainEvent(this, orderReturn));
+    }
+
+    public void RefundReturn(int returnId)
+    {
+        var orderReturn = GetOrderReturn(returnId);
+        orderReturn.SetRefundedStatus();
+        AddDomainEvent(new OrderReturnStatusChangedDomainEvent(this, orderReturn));
+    }
+
+    private OrderReturn GetOrderReturn(int returnId)
+    {
+        return _orderReturns.FirstOrDefault(r => r.Id == returnId)
+            ?? throw new OrderingDomainException($"The order does not contain return {returnId}.");
     }
 
     private void AddOrderStartedDomainEvent(string userId, string userName, int cardTypeId, string cardNumber,
