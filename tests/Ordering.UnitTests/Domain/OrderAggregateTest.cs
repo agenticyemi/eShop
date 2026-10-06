@@ -106,6 +106,18 @@ public class OrderAggregateTest
     }
 
     [TestMethod]
+    public void order_total_subtracts_item_discounts()
+    {
+        var address = new AddressBuilder().Build();
+        var order = new OrderBuilder(address)
+            .AddOne(1, "cup", 10.0m, 2.0m, string.Empty)
+            .AddOne(2, "plate", 20.0m, 5.0m, string.Empty)
+            .Build();
+
+        Assert.AreEqual(23.0m, order.GetTotal());
+    }
+
+    [TestMethod]
     public void Add_new_Order_raises_new_event()
     {
         //Arrange

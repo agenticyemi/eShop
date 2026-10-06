@@ -43,7 +43,7 @@ public class OrderQueries(OrderingContext context)
                 OrderNumber = o.Id,
                 Date = o.OrderDate,
                 Status = o.OrderStatus.ToString(),
-                Total =(double) o.OrderItems.Sum(oi => oi.UnitPrice* oi.Units)
+                Total = (double)o.OrderItems.Sum(oi => oi.UnitPrice * oi.Units - oi.Discount)
             })
             .ToListAsync();
     } 

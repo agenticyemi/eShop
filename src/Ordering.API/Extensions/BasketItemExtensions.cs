@@ -18,7 +18,8 @@ public static class BasketItemExtensions
             ProductName = item.ProductName,
             PictureUrl = item.PictureUrl,
             UnitPrice = item.UnitPrice,
-            Units = item.Quantity
+            Units = item.Quantity,
+            Discount = item.Discount
         };
     }
 }

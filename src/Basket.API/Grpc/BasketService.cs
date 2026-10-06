@@ -46,7 +46,7 @@ public class BasketService(
             logger.LogDebug("Begin UpdateBasket call from method {Method} for basket id {Id}", context.Method, userId);
         }
 
-        var customerBasket = MapToCustomerBasket(userId, request);
+        var customerBasket = await MapToCustomerBasketAsync(userId, request);
         var response = await repository.UpdateBasketAsync(customerBasket);
         if (response is null)
         {
@@ -87,14 +87,21 @@ public class BasketService(
             });
         }
 
+        response.DiscountCode = customerBasket.DiscountCode ?? string.Empty;
+
         return response;
     }
 
-    private static CustomerBasket MapToCustomerBasket(string userId, UpdateBasketRequest customerBasketRequest)
+    private async Task<CustomerBasket> MapToCustomerBasketAsync(string userId, UpdateBasketRequest customerBasketRequest)
     {
+        var discountCode = customerBasketRequest.UpdateDiscountCode
+            ? NormalizeDiscountCode(customerBasketRequest.DiscountCode)
+            : NormalizeDiscountCode((await repository.GetBasketAsync(userId))?.DiscountCode);
+
         var response = new CustomerBasket
         {
-            BuyerId = userId
+            BuyerId = userId,
+            DiscountCode = discountCode
         };
 
         foreach (var item in customerBasketRequest.Items)
@@ -108,4 +115,7 @@ public class BasketService(
 
         return response;
     }
+
+    private static string NormalizeDiscountCode(string discountCode)
+        => string.IsNullOrWhiteSpace(discountCode) ? null : discountCode.Trim();
 }

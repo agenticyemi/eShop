@@ -1,0 +1,70 @@
+.discount-code {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-self: stretch;
+}
+
+.discount-code form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.discount-code label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    color: #444;
+    font-size: 1rem;
+    line-height: 150%;
+}
+
+.discount-code input {
+    border: 1px solid #000;
+    background: #FFF;
+    color: #000;
+    font-size: 1rem;
+    line-height: 150%;
+    padding: 1rem 0.75rem;
+    width: 100%;
+}
+
+.discount-code .button {
+    width: auto;
+    align-self: flex-end;
+}
+
+.discount-code .discount-status {
+    margin: 0;
+}
+
+.cart-summary-breakdown {
+    display: flex;
+    padding-bottom: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    align-self: stretch;
+    border-bottom: 1px solid #444;
+}
+
+.cart-summary-breakdown-line,
+.cart-summary-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    align-self: stretch;
+}
+
+.discount-code .discount-remove {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #000;
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+    align-self: flex-start;
+}

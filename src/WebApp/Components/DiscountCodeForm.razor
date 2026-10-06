@@ -1,0 +1,102 @@
+@inject IDiscountCodeCart Basket
+
+<div class="discount-code">
+    <form method="post" data-enhance>
+        <input type="hidden" name="_handler" value="apply-discount" />
+        <AntiforgeryToken />
+        <label>
+            Discount code
+            <input aria-label="Discount code" name="DiscountCode" value="@DiscountCode" autocomplete="off" aria-invalid="@InvalidAttribute" />
+        </label>
+        <button type="submit" class="button button-secondary">Apply</button>
+    </form>
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <p class="validation-message" role="alert">@message</p>
+    }
+    else if (Basket.AppliedDiscount is { } applied)
+    {
+        <p class="discount-status" role="status">@applied.StatusText</p>
+    }
+    @if (Basket.AppliedDiscount is not null)
+    {
+        <form method="post" data-enhance>
+            <input type="hidden" name="_handler" value="remove-discount" />
+            <AntiforgeryToken />
+            <button type="submit" class="discount-remove">Remove code</button>
+        </form>
+    }
+    @if (DiscountAmount > 0m && Subtotal is decimal subtotal)
+    {
+        <div class="cart-summary-breakdown">
+            <div class="cart-summary-breakdown-line">
+                <div>Subtotal</div>
+                <div>$@subtotal.ToString("0.00")</div>
+            </div>
+            <div class="cart-summary-breakdown-line">
+                <div>Discount (@Basket.AppliedDiscount!.Code)</div>
+                <div>-$@DiscountAmount.ToString("0.00")</div>
+            </div>
+        </div>
+    }
+    @if (Total is decimal total)
+    {
+        <div class="cart-summary-total">
+            <div>Total</div>
+            <div id="order-total">$@total.ToString("0.00")</div>
+        </div>
+    }
+</div>
+
+<form @formname="apply-discount" @onsubmit="ApplyAsync"></form>
+<form @formname="remove-discount" @onsubmit="RemoveAsync"></form>
+
+@code {
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    [Parameter]
+    public decimal? Subtotal { get; set; }
+
+    private decimal DiscountAmount
+    {
+        get
+        {
+            var amount = Basket.AppliedDiscount?.Amount ?? 0m;
+            return Subtotal is decimal subtotal && amount > subtotal ? subtotal : amount;
+        }
+    }
+
+    private decimal? Total => Subtotal is decimal subtotal ? Math.Max(0m, subtotal - DiscountAmount) : null;
+
+    [SupplyParameterFromForm(FormName = "apply-discount")]
+    public string? DiscountCode { get; set; }
+
+    private string? message;
+
+    private string InvalidAttribute => message is null ? "false" : "true";
+
+    protected override void OnInitialized()
+    {
+        DiscountCode ??= Basket.AppliedDiscount?.Code;
+    }
+
+    private async Task ApplyAsync()
+    {
+        message = await Basket.ApplyDiscountCodeAsync(DiscountCode);
+        if (message is null && Basket.AppliedDiscount is { } applied)
+        {
+            DiscountCode = applied.Code;
+        }
+
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveAsync()
+    {
+        await Basket.RemoveDiscountCodeAsync();
+        DiscountCode = null;
+        message = null;
+        await OnChanged.InvokeAsync();
+    }
+}
