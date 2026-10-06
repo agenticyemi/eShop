@@ -90,8 +90,8 @@ public class OrdersWebApiTest
         _identityServiceMock.GetUserIdentity()
             .Returns(Guid.NewGuid().ToString());
 
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, bool>>(), default)
-            .Returns(Task.FromResult(true));
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult(OrderReturnResult.Success()));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
@@ -105,8 +105,8 @@ public class OrdersWebApiTest
     public async Task Request_return_bad_request()
     {
         // Arrange
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, bool>>(), default)
-            .Returns(Task.FromResult(true));
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult(OrderReturnResult.Success()));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
@@ -120,10 +120,8 @@ public class OrdersWebApiTest
     public async Task Request_return_domain_rule_violation_is_bad_request()
     {
         // Arrange
-#pragma warning disable NS5003
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, bool>>(), default)
-            .Throws(new OrderingDomainException("Only 1 unit(s) of cup can still be returned."));
-#pragma warning restore NS5003
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult(OrderReturnResult.Failure("Only 1 unit(s) of cup can still be returned.")));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
@@ -135,11 +133,30 @@ public class OrdersWebApiTest
     }
 
     [TestMethod]
+    public async Task Request_return_validation_error_is_bad_request()
+    {
+        // Arrange
+        var validationFailures = new[] { new FluentValidation.Results.ValidationFailure("Reason", "A reason of at most 500 characters is required") };
+#pragma warning disable NS5003
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, OrderReturnResult>>(), default)
+            .Throws(new OrderingDomainException("Command Validation Errors", new FluentValidation.ValidationException("Validation exception", validationFailures)));
+#pragma warning restore NS5003
+
+        // Act
+        var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
+        var result = await OrdersApi.RequestReturnAsync(Guid.NewGuid(), 1, new RequestReturnRequest(1, 1, ""), orderServices);
+
+        // Assert
+        Assert.IsInstanceOfType<BadRequest<string>>(result.Result);
+        Assert.AreEqual("A reason of at most 500 characters is required", ((BadRequest<string>)result.Result).Value);
+    }
+
+    [TestMethod]
     public async Task Request_return_failed_to_process()
     {
         // Arrange
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, bool>>(), default)
-            .Returns(Task.FromResult(false));
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<RequestReturnCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult((OrderReturnResult)null));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
@@ -153,8 +170,8 @@ public class OrdersWebApiTest
     public async Task Update_return_status_with_requestId_success()
     {
         // Arrange
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<UpdateReturnStatusCommand, bool>>(), default)
-            .Returns(Task.FromResult(true));
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<UpdateReturnStatusCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult(OrderReturnResult.Success()));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);
@@ -168,8 +185,8 @@ public class OrdersWebApiTest
     public async Task Update_return_status_bad_request()
     {
         // Arrange
-        _mediatorMock.Send(Arg.Any<IdentifiedCommand<UpdateReturnStatusCommand, bool>>(), default)
-            .Returns(Task.FromResult(true));
+        _mediatorMock.Send(Arg.Any<IdentifiedCommand<UpdateReturnStatusCommand, OrderReturnResult>>(), default)
+            .Returns(Task.FromResult(OrderReturnResult.Success()));
 
         // Act
         var orderServices = new OrderServices(_mediatorMock, _orderQueriesMock, _identityServiceMock, _loggerMock);

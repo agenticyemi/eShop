@@ -17,3 +17,17 @@ public class UpdateReturnStatusCommandValidator : AbstractValidator<UpdateReturn
         }
     }
 }
+
+public class UpdateReturnStatusIdentifiedCommandValidator : AbstractValidator<IdentifiedCommand<UpdateReturnStatusCommand, OrderReturnResult>>
+{
+    public UpdateReturnStatusIdentifiedCommandValidator(IValidator<UpdateReturnStatusCommand> commandValidator, ILogger<UpdateReturnStatusIdentifiedCommandValidator> logger)
+    {
+        RuleFor(command => command.Id).NotEmpty();
+        RuleFor(command => command.Command).NotNull().SetValidator(commandValidator);
+
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            logger.LogTrace("INSTANCE CREATED - {ClassName}", GetType().Name);
+        }
+    }
+}

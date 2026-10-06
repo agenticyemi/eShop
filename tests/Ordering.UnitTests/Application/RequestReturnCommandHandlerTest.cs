@@ -18,7 +18,7 @@ public class RequestReturnCommandHandlerTest
     }
 
     [TestMethod]
-    public async Task Handle_return_false_if_order_is_not_found()
+    public async Task Handle_return_null_if_order_is_not_found()
     {
         //Arrange
         _orderRepositoryMock.GetAsync(Arg.Any<int>())
@@ -29,12 +29,12 @@ public class RequestReturnCommandHandlerTest
         var result = await handler.Handle(FakeRequestReturnCommand(), CancellationToken.None);
 
         //Assert
-        Assert.IsFalse(result);
+        Assert.IsNull(result);
         await _orderRepositoryMock.UnitOfWork.DidNotReceive().SaveEntitiesAsync(Arg.Any<CancellationToken>());
     }
 
     [TestMethod]
-    public async Task Handle_return_false_if_order_does_not_belong_to_the_user()
+    public async Task Handle_return_null_if_order_does_not_belong_to_the_user()
     {
         //Arrange
         _orderRepositoryMock.GetAsync(Arg.Any<int>())
@@ -48,7 +48,7 @@ public class RequestReturnCommandHandlerTest
         var result = await handler.Handle(FakeRequestReturnCommand(), CancellationToken.None);
 
         //Assert
-        Assert.IsFalse(result);
+        Assert.IsNull(result);
         await _orderRepositoryMock.UnitOfWork.DidNotReceive().SaveEntitiesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -72,13 +72,14 @@ public class RequestReturnCommandHandlerTest
         var result = await handler.Handle(FakeRequestReturnCommand(), CancellationToken.None);
 
         //Assert
-        Assert.IsTrue(result);
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsNull(result.ErrorMessage);
         Assert.HasCount(1, order.OrderReturns);
         Assert.AreEqual(ReturnStatus.Requested, order.OrderReturns.Single().Status);
     }
 
     [TestMethod]
-    public async Task Handle_throws_domain_exception_when_order_cannot_be_returned()
+    public async Task Handle_return_failure_with_reason_when_order_cannot_be_returned()
     {
         //Arrange
         var order = new OrderBuilder(new AddressBuilder().Build())
@@ -92,9 +93,15 @@ public class RequestReturnCommandHandlerTest
         _buyerRepositoryMock.FindAsync(BuyerIdentityGuid)
             .Returns(Task.FromResult(new Buyer(BuyerIdentityGuid, "fakeName")));
 
-        //Act - Assert
+        //Act
         var handler = new RequestReturnCommandHandler(_orderRepositoryMock, _buyerRepositoryMock);
-        await Assert.ThrowsExactlyAsync<OrderingDomainException>(() => handler.Handle(FakeRequestReturnCommand(), CancellationToken.None));
+        var result = await handler.Handle(FakeRequestReturnCommand(), CancellationToken.None);
+
+        //Assert
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual("Is not possible to request a return for an order in status Submitted.", result.ErrorMessage);
+        Assert.IsEmpty(order.OrderReturns);
+        await _orderRepositoryMock.UnitOfWork.DidNotReceive().SaveEntitiesAsync(Arg.Any<CancellationToken>());
     }
 
     private static RequestReturnCommand FakeRequestReturnCommand()

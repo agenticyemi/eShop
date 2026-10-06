@@ -1,7 +1,7 @@
 namespace eShop.Ordering.API.Application.Commands;
 
 // Regular CommandHandler
-public class RequestReturnCommandHandler : IRequestHandler<RequestReturnCommand, bool>
+public class RequestReturnCommandHandler : IRequestHandler<RequestReturnCommand, OrderReturnResult>
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IBuyerRepository _buyerRepository;
@@ -17,41 +17,50 @@ public class RequestReturnCommandHandler : IRequestHandler<RequestReturnCommand,
     /// customer requests a return for one of the items of their order from app
     /// </summary>
     /// <param name="command"></param>
-    /// <returns></returns>
-    public async Task<bool> Handle(RequestReturnCommand command, CancellationToken cancellationToken)
+    /// <returns>The result, or null when the order does not exist for this customer</returns>
+    public async Task<OrderReturnResult> Handle(RequestReturnCommand command, CancellationToken cancellationToken)
     {
         var orderToUpdate = await _orderRepository.GetAsync(command.OrderNumber);
         if (orderToUpdate == null)
         {
-            return false;
+            return null;
         }
 
         // Shoppers can only request returns on their own orders
         var buyer = await _buyerRepository.FindAsync(command.UserId);
         if (buyer == null || orderToUpdate.BuyerId != buyer.Id)
         {
-            return false;
+            return null;
         }
 
-        orderToUpdate.RequestReturn(command.ProductId, command.Units, command.Reason);
-        return await _orderRepository.UnitOfWork.SaveEntitiesAsync(cancellationToken);
+        try
+        {
+            orderToUpdate.RequestReturn(command.ProductId, command.Units, command.Reason);
+        }
+        catch (OrderingDomainException ex)
+        {
+            return OrderReturnResult.Failure(ex.Message);
+        }
+
+        await _orderRepository.UnitOfWork.SaveEntitiesAsync(cancellationToken);
+        return OrderReturnResult.Success();
     }
 }
 
 
 // Use for Idempotency in Command process
-public class RequestReturnIdentifiedCommandHandler : IdentifiedCommandHandler<RequestReturnCommand, bool>
+public class RequestReturnIdentifiedCommandHandler : IdentifiedCommandHandler<RequestReturnCommand, OrderReturnResult>
 {
     public RequestReturnIdentifiedCommandHandler(
         IMediator mediator,
         IRequestManager requestManager,
-        ILogger<IdentifiedCommandHandler<RequestReturnCommand, bool>> logger)
+        ILogger<IdentifiedCommandHandler<RequestReturnCommand, OrderReturnResult>> logger)
         : base(mediator, requestManager, logger)
     {
     }
 
-    protected override bool CreateResultForDuplicateRequest()
+    protected override OrderReturnResult CreateResultForDuplicateRequest()
     {
-        return true; // Ignore duplicate requests for processing order.
+        return OrderReturnResult.Success(); // Ignore duplicate requests for processing order.
     }
 }
