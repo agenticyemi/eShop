@@ -43,10 +43,52 @@ public class OrderQueries(OrderingContext context)
                 OrderNumber = o.Id,
                 Date = o.OrderDate,
                 Status = o.OrderStatus.ToString(),
-                Total =(double) o.OrderItems.Sum(oi => oi.UnitPrice* oi.Units)
+                Total =(double) o.OrderItems.Sum(oi => oi.UnitPrice* oi.Units),
+                ReturnStatus = o.OrderReturns
+                    .OrderByDescending(r => r.Id)
+                    .Select(r => r.Status.ToString())
+                    .FirstOrDefault()
             })
             .ToListAsync();
     } 
+
+    public async Task<OrderReturns> GetOrderReturnsAsync(int id, string userId)
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .Include(o => o.OrderReturns)
+            .FirstOrDefaultAsync(o => o.Id == id && o.Buyer.IdentityGuid == userId);
+
+        if (order is null)
+            throw new KeyNotFoundException();
+
+        return new OrderReturns
+        {
+            OrderNumber = order.Id,
+            OrderStatus = order.OrderStatus.ToString(),
+            CanRequestReturn = order.CanRequestReturn(),
+            Items = order.OrderItems.Select(oi => new ReturnableItem
+            {
+                ProductId = oi.ProductId,
+                ProductName = oi.ProductName,
+                PictureUrl = oi.PictureUrl,
+                Units = oi.Units,
+                ReturnableUnits = order.GetReturnableUnits(oi.ProductId)
+            }).ToList(),
+            Returns = order.OrderReturns
+                .OrderByDescending(r => r.RequestDate)
+                .Select(r => new ReturnSummary
+                {
+                    ReturnNumber = r.Id,
+                    ProductId = r.ProductId,
+                    ProductName = r.ProductName,
+                    Units = r.Units,
+                    Reason = r.Reason,
+                    Status = r.Status.ToString(),
+                    RequestDate = r.RequestDate
+                }).ToList()
+        };
+    }
     
     public async Task<IEnumerable<CardType>> GetCardTypesAsync() => 
         await context.CardTypes.Select(c=> new CardType { Id = c.Id, Name = c.Name }).ToListAsync();

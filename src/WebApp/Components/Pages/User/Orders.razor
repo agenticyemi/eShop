@@ -24,6 +24,7 @@ else
             <div>Date</div>
             <div class="total-header">Total</div>
             <div>Status</div>
+            <div>Returns</div>
         </li>
         @foreach (var order in orders)
         {
@@ -42,6 +43,18 @@ else
                         @order.Status
                     </span>
                 </div>
+                <div class="order-returns">
+                    @if (order.ReturnStatus is not null)
+                    {
+                        <a href="user/orders/@order.OrderNumber/returns" class="status return-@order.ReturnStatus.ToLower()" title="View returns for this order">
+                            Return @order.ReturnStatus.ToLower()
+                        </a>
+                    }
+                    else if (CanRequestReturn(order))
+                    {
+                        <a href="user/orders/@order.OrderNumber/returns" class="return-link">Request return</a>
+                    }
+                </div>
             </li>
         }
     </ul>
@@ -55,4 +68,8 @@ else
     {
         orders = await OrderingService.GetOrders();
     }
+
+    // Mirrors Order.CanRequestReturn() in the ordering domain: returns open up once an order can no longer be cancelled
+    private static bool CanRequestReturn(OrderRecord order)
+        => order.Status is "Paid" or "Shipped";
 }

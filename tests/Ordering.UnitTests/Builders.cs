@@ -39,6 +39,22 @@ public class OrderBuilder
         return this;
     }
 
+    // Walks the order through the regular Submitted -> AwaitingValidation -> StockConfirmed -> Paid flow
+    public OrderBuilder Paid()
+    {
+        order.SetAwaitingValidationStatus();
+        order.SetStockConfirmedStatus();
+        order.SetPaidStatus();
+        return this;
+    }
+
+    public OrderBuilder Shipped()
+    {
+        Paid();
+        order.SetShippedStatus();
+        return this;
+    }
+
     public Order Build()
     {
         return order;

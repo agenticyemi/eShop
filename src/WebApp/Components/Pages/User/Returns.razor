@@ -1,0 +1,194 @@
+@page "/user/orders/{OrderNumber:int}/returns"
+@using System.Net
+@attribute [Authorize]
+@attribute [StreamRendering]
+@inject OrderingService OrderingService
+@inject IProductImageUrlProvider ProductImages
+
+<PageTitle>Returns | AdventureWorks</PageTitle>
+<SectionContent SectionName="page-header-title">Returns for order @OrderNumber</SectionContent>
+<OrdersRefreshOnStatusChange />
+
+<div class="returns">
+    <a href="user/orders" class="returns-back-link">
+        <img role="presentation" src="icons/arrow-left.svg" />
+        <p>Back to orders</p>
+    </a>
+
+    @if (orderReturns is null && !notFound)
+    {
+        <p>Loading...</p>
+    }
+    else if (orderReturns is null)
+    {
+        <p>Sorry, we couldn't find any such order.</p>
+    }
+    else
+    {
+        @if (errorMessage is not null)
+        {
+            <p class="returns-message returns-error" role="alert">@errorMessage</p>
+        }
+        else if (successMessage is not null)
+        {
+            <p class="returns-message returns-success" role="status">@successMessage</p>
+        }
+
+        <div class="returns-section">
+            <h2>Items in this order</h2>
+            @if (!orderReturns.CanRequestReturn)
+            {
+                <p class="returns-hint">
+                    Returns can be requested once an order has been paid for or shipped.
+                    This order is currently <span class="status @orderReturns.OrderStatus.ToLower()">@orderReturns.OrderStatus</span>.
+                </p>
+            }
+            <div class="return-items">
+                <div class="return-item-header">
+                    <div class="catalog-item-info">Products</div>
+                    <div class="catalog-item-return">Return</div>
+                </div>
+                @foreach (var item in orderReturns.Items)
+                {
+                    <div class="return-item" @key="@item.ProductId">
+                        <div class="catalog-item-info">
+                            <img alt="@item.ProductName" src="@ProductImages.GetProductImageUrl(item.ProductId)" />
+                            <div class="catalog-item-content">
+                                <p class="name">@item.ProductName</p>
+                                <p class="units">@item.Units ordered, @item.ReturnableUnits returnable</p>
+                            </div>
+                        </div>
+                        <div class="catalog-item-return">
+                            @if (orderReturns.CanRequestReturn && item.ReturnableUnits > 0)
+                            {
+                                <form method="post" data-enhance>
+                                    <input type="hidden" name="_handler" value="request-return" />
+                                    <AntiforgeryToken />
+                                    <input type="hidden" name="RequestId" value="@Guid.NewGuid()" />
+                                    <input aria-label="units to return" type="number" name="ReturnUnits" value="1" min="1" max="@item.ReturnableUnits" required />
+                                    <input aria-label="reason for return" type="text" name="ReturnReason" placeholder="Reason for return" maxlength="500" required />
+                                    <button type="submit"
+                                            class="button button-secondary"
+                                            name="ReturnProductId"
+                                            value="@item.ProductId">
+                                        Request return
+                                    </button>
+                                </form>
+                            }
+                            else if (item.ReturnableUnits == 0)
+                            {
+                                <p class="returns-hint">All units have been returned.</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="returns-section">
+            <h2>Return requests</h2>
+            @if (orderReturns.Returns.Length == 0)
+            {
+                <p>You haven't requested any returns for this order.</p>
+            }
+            else
+            {
+                <ul class="returns-list">
+                    <li class="returns-header returns-item">
+                        <div>Number</div>
+                        <div>Date</div>
+                        <div class="return-product-header">Product</div>
+                        <div>Units</div>
+                        <div>Status</div>
+                    </li>
+                    @foreach (var orderReturn in orderReturns.Returns)
+                    {
+                        <li class="returns-item" @key="@orderReturn.ReturnNumber">
+                            <div class="return-number">
+                                @orderReturn.ReturnNumber
+                            </div>
+                            <div class="return-date">
+                                @orderReturn.RequestDate
+                            </div>
+                            <div class="return-product">
+                                <p class="name">@orderReturn.ProductName</p>
+                                <p class="reason">@orderReturn.Reason</p>
+                            </div>
+                            <div class="return-units">
+                                @orderReturn.Units
+                            </div>
+                            <div class="return-status">
+                                <span class="status @orderReturn.Status.ToLower()">
+                                    @orderReturn.Status
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+<form @formname="request-return" @onsubmit="@RequestReturnAsync"></form>
+
+@code {
+    private OrderReturnsRecord? orderReturns;
+    private bool notFound;
+    private string? errorMessage;
+    private string? successMessage;
+
+    [Parameter]
+    public int OrderNumber { get; set; }
+
+    [SupplyParameterFromForm]
+    public Guid? RequestId { get; set; }
+
+    [SupplyParameterFromForm]
+    public int? ReturnProductId { get; set; }
+
+    [SupplyParameterFromForm]
+    public int? ReturnUnits { get; set; }
+
+    [SupplyParameterFromForm]
+    public string? ReturnReason { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrderReturnsAsync();
+    }
+
+    private async Task LoadOrderReturnsAsync()
+    {
+        try
+        {
+            orderReturns = await OrderingService.GetOrderReturns(OrderNumber);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            notFound = true;
+        }
+    }
+
+    private async Task RequestReturnAsync()
+    {
+        if (ReturnProductId is null || ReturnUnits is null || string.IsNullOrWhiteSpace(ReturnReason))
+        {
+            errorMessage = "Please choose how many units to return and tell us why.";
+            return;
+        }
+
+        var request = new RequestReturnRequest(ReturnProductId.Value, ReturnUnits.Value, ReturnReason);
+        var result = await OrderingService.RequestReturn(OrderNumber, request, RequestId ?? Guid.NewGuid());
+
+        if (result.Succeeded)
+        {
+            successMessage = "Your return request has been submitted. We'll let you know once it has been reviewed.";
+            await LoadOrderReturnsAsync();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+}

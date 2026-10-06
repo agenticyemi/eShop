@@ -63,6 +63,45 @@
     border: 1px solid #2A9E01;
 }
 
+.order-returns .status {
+    border-radius: 1.25rem;
+    border: 1px solid #A3A3A3;
+    color: #A3A3A3;
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.25rem;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.order-returns .status.return-requested {
+    color: #B86E00;
+    border: 1px solid #B86E00;
+}
+
+.order-returns .status.return-approved {
+    color: #0D6EFD;
+    border: 1px solid #0D6EFD;
+}
+
+.order-returns .status.return-rejected {
+    color: #FF4E4E;
+    border: 1px solid #FF4E4E;
+}
+
+.order-returns .status.return-refunded {
+    color: #2A9E01;
+    border: 1px solid #2A9E01;
+}
+
+.order-returns .return-link {
+    color: #000;
+    font-size: 0.875rem;
+    text-decoration: underline;
+}
+
 @media only screen and (max-width: 480px) { 
     .orders {
         padding: 0 1rem;

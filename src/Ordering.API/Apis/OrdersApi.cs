@@ -10,6 +10,9 @@ public static class OrdersApi
 
         api.MapPut("/cancel", CancelOrderAsync);
         api.MapPut("/ship", ShipOrderAsync);
+        api.MapPut("/returns/status", UpdateReturnStatusAsync);
+        api.MapGet("{orderId:int}/returns", GetOrderReturnsAsync);
+        api.MapPost("{orderId:int}/returns", RequestReturnAsync);
         api.MapGet("{orderId:int}", GetOrderAsync);
         api.MapGet("/", GetOrdersByUserAsync);
         api.MapGet("/cardtypes", GetCardTypesAsync);
@@ -76,6 +79,102 @@ public static class OrdersApi
 
         return TypedResults.Ok();
     }
+
+    public static async Task<Results<Ok, BadRequest<string>, ProblemHttpResult>> RequestReturnAsync(
+        [FromHeader(Name = "x-requestid")] Guid requestId,
+        int orderId,
+        RequestReturnRequest request,
+        [AsParameters] OrderServices services)
+    {
+        if (requestId == Guid.Empty)
+        {
+            return TypedResults.BadRequest("Empty GUID is not valid for request ID");
+        }
+
+        var userId = services.IdentityService.GetUserIdentity();
+        var requestReturnCommand = new RequestReturnCommand(orderId, userId, request.ProductId, request.Units, request.Reason);
+        var requestReturn = new IdentifiedCommand<RequestReturnCommand, OrderReturnResult>(requestReturnCommand, requestId);
+
+        services.Logger.LogInformation(
+            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+            requestReturn.GetGenericTypeName(),
+            nameof(requestReturn.Command.OrderNumber),
+            requestReturn.Command.OrderNumber,
+            requestReturn);
+
+        return await SendReturnCommandAsync(services, requestReturn, "Request return failed to process.");
+    }
+
+    public static async Task<Results<Ok, BadRequest<string>, ProblemHttpResult>> UpdateReturnStatusAsync(
+        [FromHeader(Name = "x-requestid")] Guid requestId,
+        UpdateReturnStatusCommand command,
+        [AsParameters] OrderServices services)
+    {
+        if (requestId == Guid.Empty)
+        {
+            return TypedResults.BadRequest("Empty GUID is not valid for request ID");
+        }
+
+        var requestUpdateReturnStatus = new IdentifiedCommand<UpdateReturnStatusCommand, OrderReturnResult>(command, requestId);
+
+        services.Logger.LogInformation(
+            "Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+            requestUpdateReturnStatus.GetGenericTypeName(),
+            nameof(requestUpdateReturnStatus.Command.ReturnNumber),
+            requestUpdateReturnStatus.Command.ReturnNumber,
+            requestUpdateReturnStatus);
+
+        return await SendReturnCommandAsync(services, requestUpdateReturnStatus, "Update return status failed to process.");
+    }
+
+    // Return commands report business rule violations through OrderReturnResult (and request validation
+    // through OrderingDomainException); both are the caller's to fix, so they map to a 400 with the message.
+    private static async Task<Results<Ok, BadRequest<string>, ProblemHttpResult>> SendReturnCommandAsync(
+        OrderServices services,
+        IRequest<OrderReturnResult> command,
+        string failureDetail)
+    {
+        OrderReturnResult commandResult;
+        try
+        {
+            commandResult = await services.Mediator.Send(command);
+        }
+        catch (OrderingDomainException ex)
+        {
+            return TypedResults.BadRequest(GetDomainErrorMessage(ex));
+        }
+
+        if (commandResult is null)
+        {
+            return TypedResults.Problem(detail: failureDetail, statusCode: 500);
+        }
+
+        if (!commandResult.Succeeded)
+        {
+            return TypedResults.BadRequest(commandResult.ErrorMessage);
+        }
+
+        return TypedResults.Ok();
+    }
+
+    public static async Task<Results<Ok<OrderReturns>, NotFound>> GetOrderReturnsAsync(int orderId, [AsParameters] OrderServices services)
+    {
+        try
+        {
+            var userId = services.IdentityService.GetUserIdentity();
+            var orderReturns = await services.Queries.GetOrderReturnsAsync(orderId, userId);
+            return TypedResults.Ok(orderReturns);
+        }
+        catch
+        {
+            return TypedResults.NotFound();
+        }
+    }
+
+    private static string GetDomainErrorMessage(OrderingDomainException exception)
+        => exception.InnerException is ValidationException validationException
+            ? string.Join(" ", validationException.Errors.Select(e => e.ErrorMessage))
+            : exception.Message;
 
     public static async Task<Results<Ok<Order>, NotFound>> GetOrderAsync(int orderId, [AsParameters] OrderServices services)
     {
@@ -183,3 +282,8 @@ public record CreateOrderRequest(
     int CardTypeId,
     string Buyer,
     List<BasketItem> Items);
+
+public record RequestReturnRequest(
+    int ProductId,
+    int Units,
+    string Reason);

@@ -95,6 +95,72 @@ public sealed class OrderingApiTests : IClassFixture<OrderingApiFixture>
     }
 
     [Fact]
+    public async Task RequestReturnWithEmptyGuidFails()
+    {
+        // Act
+        var content = new StringContent(BuildReturnRequest(), UTF8Encoding.UTF8, "application/json")
+        {
+            Headers = { { "x-requestid", Guid.Empty.ToString() } }
+        };
+        var response = await _httpClient.PostAsync("api/orders/1/returns", content, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestReturnForNonExistentOrderFails()
+    {
+        // Act
+        var content = new StringContent(BuildReturnRequest(), UTF8Encoding.UTF8, "application/json")
+        {
+            Headers = { { "x-requestid", Guid.NewGuid().ToString() } }
+        };
+        var response = await _httpClient.PostAsync("api/orders/-1/returns", content, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestReturnWithoutReasonFails()
+    {
+        // Act
+        var content = new StringContent(JsonSerializer.Serialize(new { ProductId = 1, Units = 1, Reason = "" }), UTF8Encoding.UTF8, "application/json")
+        {
+            Headers = { { "x-requestid", Guid.NewGuid().ToString() } }
+        };
+        var response = await _httpClient.PostAsync("api/orders/-1/returns", content, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetReturnsForNonExistentOrderFails()
+    {
+        // Act
+        var response = await _httpClient.GetAsync("api/orders/-1/returns", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateReturnStatusWithEmptyGuidFails()
+    {
+        // Act
+        var content = new StringContent(JsonSerializer.Serialize(new { OrderNumber = -1, ReturnNumber = -1, Status = "Approved" }), UTF8Encoding.UTF8, "application/json")
+        {
+            Headers = { { "x-requestid", Guid.Empty.ToString() } }
+        };
+        var response = await _httpClient.PutAsync("api/orders/returns/status", content, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetAllOrdersCardType()
     {
         // Act 1
@@ -239,5 +305,16 @@ public sealed class OrderingApiTests : IClassFixture<OrderingApiFixture>
             OrderNumber = "-1"
         };
         return JsonSerializer.Serialize(order);
+    }
+
+    string BuildReturnRequest()
+    {
+        var returnRequest = new
+        {
+            ProductId = 1,
+            Units = 1,
+            Reason = "Damaged"
+        };
+        return JsonSerializer.Serialize(returnRequest);
     }
 }
