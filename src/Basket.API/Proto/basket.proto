@@ -15,6 +15,7 @@ message GetBasketRequest {
 
 message CustomerBasketResponse {
     repeated BasketItem items = 1;
+    string discount_code = 2;
 }
 
 message BasketItem {
@@ -24,6 +25,9 @@ message BasketItem {
 
 message UpdateBasketRequest {
     repeated BasketItem items = 2;
+    string discount_code = 3;
+    // Clients that do not know about discount codes leave this false so an update keeps the saved code.
+    bool update_discount_code = 4;
 }
 
 message DeleteBasketRequest {

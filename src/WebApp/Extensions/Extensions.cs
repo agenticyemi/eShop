@@ -21,6 +21,7 @@ public static class Extensions
 
         // Application services
         builder.Services.AddScoped<BasketState>();
+        builder.Services.AddScoped<IDiscountCodeCart>(sp => sp.GetRequiredService<BasketState>());
         builder.Services.AddScoped<LogOutService>();
         builder.Services.AddSingleton<BasketService>();
         builder.Services.AddSingleton<OrderStatusNotificationService>();

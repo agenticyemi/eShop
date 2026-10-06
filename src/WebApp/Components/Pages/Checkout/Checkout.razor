@@ -9,6 +9,13 @@
 <SectionContent SectionName="page-header-title">Checkout</SectionContent>
 
 <div class='checkout'>
+    @if (basketItems.Count > 0)
+    {
+        <div class="order-summary">
+            <h2>Order summary</h2>
+            <DiscountCodeForm Subtotal="Subtotal" OnChanged="ReloadBasketAsync" />
+        </div>
+    }
     <EditForm EditContext="@editContext" FormName="checkout" OnSubmit="@HandleSubmitAsync" Enhance>
         <DataAnnotationsValidator />
         <div class="form">
@@ -64,6 +71,7 @@
 @code {
     private EditContext editContext = default!;
     private ValidationMessageStore extraMessages = default!;
+    private IReadOnlyCollection<BasketItem> basketItems = [];
 
     [SupplyParameterFromForm]
     public BasketCheckoutInfo Info { get; set; } = default!;
@@ -81,6 +89,18 @@
         editContext = new EditContext(Info!);
         extraMessages = new ValidationMessageStore(editContext);
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        basketItems = await Basket.GetBasketItemsAsync();
+    }
+
+    private async Task ReloadBasketAsync()
+    {
+        basketItems = await Basket.GetBasketItemsAsync();
+    }
+
+    private decimal Subtotal => basketItems.Sum(item => item.Quantity * item.UnitPrice);
 
     private void PopulateFormWithDefaultInfo()
     {

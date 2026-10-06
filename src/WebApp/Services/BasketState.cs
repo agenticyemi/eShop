@@ -10,10 +10,13 @@ public class BasketState(
     BasketService basketService,
     CatalogService catalogService,
     OrderingService orderingService,
-    AuthenticationStateProvider authenticationStateProvider) : IBasketState
+    AuthenticationStateProvider authenticationStateProvider) : IBasketState, IDiscountCodeCart
 {
     private Task<IReadOnlyCollection<BasketItem>>? _cachedBasket;
+    private string? _discountCode;
     private HashSet<BasketStateChangedSubscription> _changeSubscriptions = new();
+
+    public AppliedDiscount? AppliedDiscount { get; private set; }
 
     public Task DeleteBasketAsync()
         => basketService.DeleteBasketAsync();
@@ -51,7 +54,36 @@ public class BasketState(
         }
 
         _cachedBasket = null;
-        await basketService.UpdateBasketAsync(items);
+        await basketService.UpdateBasketAsync(items, _discountCode);
+        await NotifyChangeSubscribersAsync();
+    }
+
+    public async Task<string?> ApplyDiscountCodeAsync(string? code)
+    {
+        var error = DiscountCodes.GetError(code);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var items = (await FetchBasketItemsAsync())
+            .Select(i => new BasketQuantity(i.ProductId, i.Quantity))
+            .ToList();
+        _cachedBasket = null;
+        await basketService.UpdateBasketAsync(items, DiscountCodes.Canonical(code));
+        await FetchBasketItemsAsync();
+        await NotifyChangeSubscribersAsync();
+        return null;
+    }
+
+    public async Task RemoveDiscountCodeAsync()
+    {
+        var items = (await FetchBasketItemsAsync())
+            .Select(i => new BasketQuantity(i.ProductId, i.Quantity))
+            .ToList();
+        _cachedBasket = null;
+        await basketService.UpdateBasketAsync(items, null);
+        await FetchBasketItemsAsync();
         await NotifyChangeSubscribersAsync();
     }
 
@@ -70,7 +102,7 @@ public class BasketState(
             }
 
             _cachedBasket = null;
-            await basketService.UpdateBasketAsync(existingItems.Select(i => new BasketQuantity(i.ProductId, i.Quantity)).ToList());
+            await basketService.UpdateBasketAsync(existingItems.Select(i => new BasketQuantity(i.ProductId, i.Quantity)).ToList(), _discountCode);
             await NotifyChangeSubscribersAsync();
         }
     }
@@ -86,7 +118,11 @@ public class BasketState(
         var userName = await authenticationStateProvider.GetUserNameAsync() ?? throw new InvalidOperationException("User does not have a user name");
 
         // Get details for the items in the basket
-        var orderItems = await FetchBasketItemsAsync();
+        var orderItems = (await FetchBasketItemsAsync()).Select(CloneBasketItem).ToList();
+        if (AppliedDiscount is { Amount: > 0m } discount)
+        {
+            DiscountCodes.Apply(orderItems, discount.Amount);
+        }
 
         // Call into Ordering.API to create the order using those details
         var request = new CreateOrderRequest(
@@ -120,17 +156,20 @@ public class BasketState(
 
         async Task<IReadOnlyCollection<BasketItem>> FetchCoreAsync()
         {
-            var quantities = await basketService.GetBasketAsync();
-            if (quantities.Count == 0)
+            var basket = await basketService.GetBasketAsync();
+            _discountCode = DiscountCodes.Canonical(basket.DiscountCode);
+
+            if (basket.Items.Count == 0)
             {
+                AppliedDiscount = _discountCode is null ? null : DiscountCodes.Calculate(_discountCode, 0m);
                 return [];
             }
 
             // Get details for the items in the basket
             var basketItems = new List<BasketItem>();
-            var productIds = quantities.Select(row => row.ProductId);
+            var productIds = basket.Items.Select(row => row.ProductId);
             var catalogItems = (await catalogService.GetCatalogItems(productIds)).ToDictionary(k => k.Id, v => v);
-            foreach (var item in quantities)
+            foreach (var item in basket.Items)
             {
                 var catalogItem = catalogItems[item.ProductId];
                 var orderItem = new BasketItem
@@ -144,9 +183,22 @@ public class BasketState(
                 basketItems.Add(orderItem);
             }
 
+            var subtotal = basketItems.Sum(item => item.UnitPrice * item.Quantity);
+            AppliedDiscount = _discountCode is null ? null : DiscountCodes.Calculate(_discountCode, subtotal);
             return basketItems;
         }
     }
+
+    private static BasketItem CloneBasketItem(BasketItem item)
+        => new()
+        {
+            Id = item.Id,
+            ProductId = item.ProductId,
+            ProductName = item.ProductName,
+            UnitPrice = item.UnitPrice,
+            OldUnitPrice = item.OldUnitPrice,
+            Quantity = item.Quantity,
+        };
 
     private class BasketStateChangedSubscription(BasketState Owner, EventCallback Callback) : IDisposable
     {

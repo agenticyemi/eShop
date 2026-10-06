@@ -6,9 +6,9 @@ namespace eShop.WebApp.Services;
 
 public class BasketService(GrpcBasketClient basketClient)
 {
-    public async Task<IReadOnlyCollection<BasketQuantity>> GetBasketAsync()
+    public async Task<BasketSnapshot> GetBasketAsync()
     {
-        var result = await basketClient.GetBasketAsync(new ());
+        var result = await basketClient.GetBasketAsync(new());
         return MapToBasket(result);
     }
 
@@ -17,33 +17,39 @@ public class BasketService(GrpcBasketClient basketClient)
         await basketClient.DeleteBasketAsync(new DeleteBasketRequest());
     }
 
-    public async Task UpdateBasketAsync(IReadOnlyCollection<BasketQuantity> basket)
+    public async Task UpdateBasketAsync(IReadOnlyCollection<BasketQuantity> basket, string? discountCode)
     {
-        var updatePayload = new UpdateBasketRequest();
+        var updatePayload = new UpdateBasketRequest
+        {
+            DiscountCode = discountCode ?? string.Empty,
+            UpdateDiscountCode = true,
+        };
 
         foreach (var item in basket)
         {
-            var updateItem = new GrpcBasketItem
+            updatePayload.Items.Add(new GrpcBasketItem
             {
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
-            };
-            updatePayload.Items.Add(updateItem);
+            });
         }
 
         await basketClient.UpdateBasketAsync(updatePayload);
     }
 
-    private static List<BasketQuantity> MapToBasket(CustomerBasketResponse response)
+    private static BasketSnapshot MapToBasket(CustomerBasketResponse response)
     {
-        var result = new List<BasketQuantity>();
+        var items = new List<BasketQuantity>(response.Items.Count);
         foreach (var item in response.Items)
         {
-            result.Add(new BasketQuantity(item.ProductId, item.Quantity));
+            items.Add(new BasketQuantity(item.ProductId, item.Quantity));
         }
 
-        return result;
+        var discountCode = string.IsNullOrWhiteSpace(response.DiscountCode) ? null : response.DiscountCode;
+        return new BasketSnapshot(items, discountCode);
     }
 }
+
+public record BasketSnapshot(IReadOnlyList<BasketQuantity> Items, string? DiscountCode);
 
 public record BasketQuantity(int ProductId, int Quantity);
